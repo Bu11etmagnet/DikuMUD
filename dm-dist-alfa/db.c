@@ -96,6 +96,7 @@ struct help_index_element *build_help_index(FILE *fl, int *num);
 *  routines for booting the system                                       *
 *********************************************************************** */
 
+struct reset_q_type reset_q;
 
 /* body of the booting system */
 void boot_db(void)
