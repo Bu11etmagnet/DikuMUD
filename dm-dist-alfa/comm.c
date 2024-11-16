@@ -21,6 +21,7 @@
 #include <string.h>
 #include <sys/time.h>
 #include <fcntl.h>
+//#ifdef __linux__
 #include <signal.h>
 #include <time.h>
 
@@ -147,11 +148,11 @@ int main(int argc, char **argv)
 		}
 		pos++;
 	}
-	
+
 	if (pos < argc)
 		if (!isdigit(*argv[pos]))
 		{
-			fprintf(stderr, "Usage: %s [-l] [-s] [-d pathname] [ port # ]\n", 
+			fprintf(stderr, "Usage: %s [-l] [-s] [-d pathname] [ port # ]\n",
 				argv[0]);
 			exit(0);
 		}
@@ -188,7 +189,7 @@ int main(int argc, char **argv)
 /* Init sockets, run game, and cleanup sockets */
 int run_the_game(int port)
 {
-	int s; 
+	int s;
 	PROFILE(extern etext();)
 
 	void signal_setup(void);
@@ -217,7 +218,7 @@ int run_the_game(int port)
 
 	game_loop(s);
 
-	close_sockets(s); 
+	close_sockets(s);
 
 	PROFILE(monitor(0);)
 
@@ -244,7 +245,7 @@ int game_loop(int s)
 	static struct timeval opt_time;
 	char comm[MAX_INPUT_LENGTH];
 	struct descriptor_data *t, *point, *next_point;
-	int pulse = 0, mask;
+	int pulse = 0;
 
 	null_time.tv_sec = 0;
 	null_time.tv_usec = 0;
@@ -256,10 +257,25 @@ int game_loop(int s)
 	maxdesc = s;
 	avail_descs = getdtablesize() - 2; /* !! Change if more needed !! */
 
-	mask = sigmask(SIGUSR1) | sigmask(SIGUSR2) | sigmask(SIGINT) |
+#ifdef __linux__
+	sigset_t sgs;
+	sigemptyset(&sgs);
+	sigaddset(&sgs, SIGUSR1);
+	sigaddset(&sgs, SIGUSR2);
+	sigaddset(&sgs, SIGINT);
+	sigaddset(&sgs, SIGPIPE);
+	sigaddset(&sgs, SIGALRM);
+	sigaddset(&sgs, SIGTERM);
+	sigaddset(&sgs, SIGURG);
+	sigaddset(&sgs, SIGXCPU);
+	sigaddset(&sgs, SIGHUP);
+	sigaddset(&sgs, SIGVTALRM);
+#else
+	int mask = sigmask(SIGUSR1) | sigmask(SIGUSR2) | sigmask(SIGINT) |
 		sigmask(SIGPIPE) | sigmask(SIGALRM) | sigmask(SIGTERM) |
 		sigmask(SIGURG) | sigmask(SIGXCPU) | sigmask(SIGHUP) |
 		sigmask(SIGVTALRM);
+#endif
 
 	/* Main loop */
 	while (!shutting_down)
@@ -288,9 +304,13 @@ int game_loop(int s)
 			last_time.tv_sec++;
 		}
 
+#ifdef __linux__
+		sigprocmask(SIG_SETMASK, &sgs, NULL);
+#else
 		sigsetmask(mask);
+#endif
 
-		if (select(maxdesc + 1, &input_set, &output_set, &exc_set, &null_time) 
+		if (select(maxdesc + 1, &input_set, &output_set, &exc_set, &null_time)
 			< 0)
 		{
 			perror("Select poll");
@@ -303,10 +323,14 @@ int game_loop(int s)
 			exit(1);
 		}
 
+#ifdef __linux__
+		sigprocmask(SIG_SETMASK, &sgs, NULL);
+#else
 		sigsetmask(0);
+#endif
 
 		/* Respond to whatever might be happening */
-		
+
 		/* New connection? */
 	 	if (FD_ISSET(s, &input_set))
 			if (new_descriptor(s) < 0)
@@ -315,7 +339,7 @@ int game_loop(int s)
 		/* kick out the freaky folks */
 		for (point = descriptor_list; point; point = next_point)
 		{
-			next_point = point->next;   
+			next_point = point->next;
 			if (FD_ISSET(point->descriptor, &exc_set))
 			{
 				FD_CLR(point->descriptor, &input_set);
@@ -324,11 +348,11 @@ int game_loop(int s)
 			}
 		}
 
-		for (point = descriptor_list; point; point = next_point) 
+		for (point = descriptor_list; point; point = next_point)
 		{
 			next_point = point->next;
 			if (FD_ISSET(point->descriptor, &input_set))
-	 			if (process_input(point) < 0) 
+	 			if (process_input(point) < 0)
 					close_socket(point);
  		}
 
@@ -344,7 +368,7 @@ int game_loop(int s)
 				{
 					if (point->character->in_room != NOWHERE)
 						char_from_room(point->character);
-					char_to_room(point->character, 
+					char_to_room(point->character,
 						point->character->specials.was_in_room);
 					point->character->specials.was_in_room = NOWHERE;
 					act("$n has returned.",	TRUE, point->character, 0, 0, TO_ROOM);
@@ -358,18 +382,18 @@ int game_loop(int s)
 
 				if (point->str)
 					string_add(point, comm);
-				else if (!point->connected) 
+				else if (!point->connected)
 					if (point->showstr_point)
 						show_string(point, comm);
 					else
 						command_interpreter(point->character, comm);
-				else 
-					nanny(point, comm); 
+				else
+					nanny(point, comm);
 			}
 		}
 
 
-		for (point = descriptor_list; point; point = next_point) 
+		for (point = descriptor_list; point; point = next_point)
 		{
 			next_point = point->next;
 			if (FD_ISSET(point->descriptor, &output_set) && point->output.head)
@@ -389,7 +413,7 @@ int game_loop(int s)
 					if (point->showstr_point)
 						write_to_descriptor(point->descriptor,
 							"*** Press return ***");
-					else					
+					else
 						write_to_descriptor(point->descriptor, "> ");
 				point->prompt_mode = 0;
 			}
@@ -489,7 +513,7 @@ void write_to_q(char *txt, struct txt_q *queue)
 		new->next = NULL;
 	}
 }
-		
+
 
 
 
@@ -560,7 +584,7 @@ int init_socket(int port)
 	sa.sin_family = hp->h_addrtype;
 	sa.sin_port	= htons(port);
 	s = socket(AF_INET, SOCK_STREAM, 0);
-	if (s < 0) 
+	if (s < 0)
 	{
 		perror("Init-socket");
 		exit(1);
@@ -679,8 +703,8 @@ int new_descriptor(int s)
 		strncpy(newd->host, from->h_name, 49);
 		*(newd->host + 49) = '\0';
 	}
-		
-	
+
+
 	/* init desc data */
 	newd->descriptor = desc;
 	newd->connected  = 1;
@@ -708,7 +732,7 @@ int new_descriptor(int s)
 
 	return(0);
 }
-	
+
 
 
 
@@ -724,7 +748,7 @@ int process_output(struct descriptor_data *t)
 
 	/* Cycle thru output queue */
 	while (get_from_q(&t->output, i))
-	{  
+	{
 		if(t->snoop.snoop_by)
 		{
 			write_to_q("% ",&t->snoop.snoop_by->desc->output);
@@ -733,8 +757,8 @@ int process_output(struct descriptor_data *t)
 		if (write_to_descriptor(t->descriptor, i))
 			return(-1);
 	}
-	
-	if (!t->connected && !(t->character && !IS_NPC(t->character) && 
+
+	if (!t->connected && !(t->character && !IS_NPC(t->character) &&
 								  IS_SET(t->character->specials.act, PLR_COMPACT)))
 		if (write_to_descriptor(t->descriptor, "\n\r") < 0)
 			return(-1);
@@ -759,7 +783,7 @@ int write_to_descriptor(int desc, char *txt)
 			return(-1);
 		}
 		sofar += thisround;
-	} 
+	}
 	while (sofar < total);
 
 	return(0);
@@ -781,9 +805,9 @@ int process_input(struct descriptor_data *t)
 	/* Read in some stuff */
 	do
 	{
-		if ((thisround = read(t->descriptor, t->buf + begin + sofar, 
+		if ((thisround = read(t->descriptor, t->buf + begin + sofar,
 			MAX_STRING_LENGTH - (begin + sofar) - 1)) > 0)
-			sofar += thisround;		
+			sofar += thisround;
 		else
 			if (thisround < 0)
 				if(errno != EWOULDBLOCK)
@@ -799,7 +823,7 @@ int process_input(struct descriptor_data *t)
 				return(-1);
 			}
 	}
-	while (!ISNEWL(*(t->buf + begin + sofar - 1)));	
+	while (!ISNEWL(*(t->buf + begin + sofar - 1)));
 
 	*(t->buf + begin + sofar) = 0;
 
@@ -816,7 +840,7 @@ int process_input(struct descriptor_data *t)
 				if (k)  /* more than one char ? */
 				{
 					if (*(tmp + --k) == '$')
-						k--;				
+						k--;
 					i++;
 		  		}
 				else
@@ -851,7 +875,7 @@ int process_input(struct descriptor_data *t)
 
 			if (flag)
 			{
-				sprintf(buffer, 
+				sprintf(buffer,
 					"Line too long. Truncated to:\n\r%s\n\r", tmp);
 				if (write_to_descriptor(t->descriptor, buffer) < 0)
 					return(-1);
@@ -865,7 +889,7 @@ int process_input(struct descriptor_data *t)
 
 			/* squelch the entry from the buffer */
 			for (squelch = 0;; squelch++)
-				if ((*(t->buf + squelch) = 
+				if ((*(t->buf + squelch) =
 					*(t->buf + i + squelch)) == '\0')
 		  			break;
 			k = 0;
@@ -931,19 +955,19 @@ void close_socket(struct descriptor_data *d)
 		}
 	else
 		slog("Losing descriptor without char.");
-		
+
 
 	if (next_to_process == d)		/* to avoid crashing the process loop */
-		next_to_process = next_to_process->next;   
+		next_to_process = next_to_process->next;
 
 	if (d == descriptor_list) /* this is the head of the list */
 		descriptor_list = descriptor_list->next;
 	else  /* This is somewhere inside the list */
 	{
 		/* Locate the previous element */
-		for (tmp = descriptor_list; (tmp->next != d) && tmp; 
+		for (tmp = descriptor_list; (tmp->next != d) && tmp;
 			tmp = tmp->next);
-		
+
 		tmp->next = d->next;
 	}
 	if (d->showstr_head)
@@ -983,7 +1007,7 @@ void coma(int s)
 	fd_set input_set;
 	static struct timeval timeout =
 	{
-		60, 
+		60,
 		0
 	};
 	int conn;
@@ -993,10 +1017,25 @@ void coma(int s)
 
 	slog("Entering comatose state.");
 
+#ifdef __linux__
+					sigset_t sgs;
+					sigemptyset(&sgs);
+					sigaddset(&sgs, SIGUSR1);
+					sigaddset(&sgs, SIGUSR2);
+					sigaddset(&sgs, SIGINT);
+					sigaddset(&sgs, SIGPIPE);
+					sigaddset(&sgs, SIGALRM);
+					sigaddset(&sgs, SIGTERM);
+					sigaddset(&sgs, SIGURG);
+					sigaddset(&sgs, SIGXCPU);
+					sigaddset(&sgs, SIGHUP);
+					sigaddset(&sgs, SIGVTALRM);
+#else
 	sigsetmask(sigmask(SIGUSR1) | sigmask(SIGUSR2) | sigmask(SIGINT) |
 		sigmask(SIGPIPE) | sigmask(SIGALRM) | sigmask(SIGTERM) |
 		sigmask(SIGURG) | sigmask(SIGXCPU) | sigmask(SIGHUP) |
 		sigmask(SIGVTALRM));
+#endif
 
 	while (descriptor_list)
 		close_socket(descriptor_list);
@@ -1015,7 +1054,11 @@ void coma(int s)
 			if (load() < 6)
 			{
 				slog("Leaving coma with visitor.");
+#ifdef __linux__
+				sigprocmask(SIG_SETMASK, &sgs, NULL);
+#else
 				sigsetmask(0);
+#endif
 				return;
 			}
 			if ((conn = new_connection(s)) >= 0)
@@ -1024,7 +1067,7 @@ void coma(int s)
 				sleep(2);
 				close(conn);
 			}
-		}			
+		}
 
 		tics = 1;
 		if (workhours())
@@ -1036,7 +1079,11 @@ void coma(int s)
 	while (load() >= 6);
 
 	slog("Leaving coma.");
+#ifdef __linux__
+	sigprocmask(SIG_SETMASK, &sgs, NULL);
+#else
 	sigsetmask(0);
+#endif
 }
 
 
@@ -1049,7 +1096,7 @@ void coma(int s)
 
 void send_to_char(char *messg, struct char_data *ch)
 {
-		
+
 	if (ch->desc && messg)
 		write_to_q(messg, &ch->desc->output);
 }
@@ -1152,7 +1199,7 @@ void act(char *str, int hide_invisible, struct char_data *ch,
 
 	for (; to; to = to->next_in_room)
 	{
-		if (to->desc && ((to != ch) || (type == TO_CHAR)) &&  
+		if (to->desc && ((to != ch) || (type == TO_CHAR)) &&
 			(CAN_SEE(to, ch) || !hide_invisible) && AWAKE(to) &&
 			!((type == TO_NOTVICT) && (to == (struct char_data *) vict_obj)))
 		{

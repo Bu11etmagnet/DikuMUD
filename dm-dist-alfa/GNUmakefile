@@ -7,7 +7,7 @@ COMMON_FLAGS+=-fno-omit-frame-pointer
 
 CFLAGS:=${COMMON_FLAGS}
 
-CFLAGS+=-Wno-error=deprecated-declarations
+#CFLAGS+=-Wno-error=deprecated-declarations
 CFLAGS+=-Wno-error=implicit-function-declaration
 CFLAGS+=-Wno-error=char-subscripts
 CFLAGS+=-Wno-unused-but-set-variable
