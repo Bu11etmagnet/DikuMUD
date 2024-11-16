@@ -1,3 +1,9 @@
 lib/players
 lib/board.messages
 lib/pcobjs.obj
+*.o
+compile_flags.txt
+
+# binaries
+delplay
+dmserver
