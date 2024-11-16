@@ -2,6 +2,8 @@ lib/players
 lib/board.messages
 lib/pcobjs.obj
 *.o
+*.i
+*.s
 compile_flags.txt
 
 # binaries
