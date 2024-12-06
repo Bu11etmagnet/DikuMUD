@@ -150,6 +150,7 @@ int main(int argc, char **argv)
 	}
 
 	if (pos < argc)
+	{
 		if (!isdigit(*argv[pos]))
 		{
 			fprintf(stderr, "Usage: %s [-l] [-s] [-d pathname] [ port # ]\n",
@@ -161,6 +162,7 @@ int main(int argc, char **argv)
 			printf("Illegal port #\n");
 			exit(0);
 		}
+	}
 
 	sprintf(buf, "Running game on port %d.", port);
 	slog(buf);
@@ -397,10 +399,12 @@ int game_loop(int s)
 		{
 			next_point = point->next;
 			if (FD_ISSET(point->descriptor, &output_set) && point->output.head)
+			{
 				if (process_output(point) < 0)
 					close_socket(point);
 				else
 					point->prompt_mode = 1;
+			}
  		}
 
 		/* give the people some prompts */
@@ -410,11 +414,13 @@ int game_loop(int s)
 				if (point->str)
 					write_to_descriptor(point->descriptor, "] ");
 				else if (!point->connected)
+				{
 					if (point->showstr_point)
 						write_to_descriptor(point->descriptor,
 							"*** Press return ***");
 					else
 						write_to_descriptor(point->descriptor, "> ");
+				}
 				point->prompt_mode = 0;
 			}
 

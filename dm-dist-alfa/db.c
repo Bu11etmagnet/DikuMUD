@@ -777,6 +777,7 @@ void boot_zones(void)
 		for (expand = 1;;)
 		{
 			if (expand)
+			{
 				if (!cmd_no)
 					CREATE(zone_table[zon].cmd, struct reset_com, 1);
 				else
@@ -787,6 +788,7 @@ void boot_zones(void)
 						perror("reset command load");
 						exit(0);
 					}
+			}
 
 			expand = 1;
 

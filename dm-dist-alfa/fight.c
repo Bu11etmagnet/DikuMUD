@@ -644,7 +644,7 @@ void damage(struct char_data *ch, struct char_data *victim,
 			stop_fighting(victim);
 
 	if (GET_POS(victim) == POSITION_DEAD) {
-		if (IS_NPC(victim) || victim->desc)
+		if (IS_NPC(victim) || victim->desc) {
 			if (IS_AFFECTED(ch, AFF_GROUP)) {
 					group_gain(ch, victim);
 			} else {
@@ -658,6 +658,7 @@ void damage(struct char_data *ch, struct char_data *victim,
 				gain_exp(ch, exp);
 				change_alignment(ch, victim);
 			}
+		}
 		if (!IS_NPC(victim)) {
 			sprintf(buf, "%s killed by %s at %s",
 				GET_NAME(victim),

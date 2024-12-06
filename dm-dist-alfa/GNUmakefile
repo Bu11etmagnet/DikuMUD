@@ -17,7 +17,7 @@ CFLAGS+=-Wno-unused-variable
 CFLAGS+=-Wno-error=parentheses
 CFLAGS+=-Wno-error=return-type
 CFLAGS+=-Wno-error=pointer-sign
-CFLAGS+=-Wno-error=dangling-else
+#CFLAGS+=-Wno-error=dangling-else
 CFLAGS+=-Wno-error=missing-braces
 CFLAGS+=-Wno-error=unused-result
 CFLAGS+=-Wno-implicit-function-declaration

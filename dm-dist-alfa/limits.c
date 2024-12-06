@@ -401,6 +401,7 @@ void gain_condition(struct char_data *ch,int condition,int value)
 void check_idling(struct char_data *ch)
 {
 	if (++(ch->specials.timer) > 8)
+	{
 		if (ch->specials.was_in_room == NOWHERE && ch->in_room != NOWHERE)
 		{
 			ch->specials.was_in_room = ch->in_room;
@@ -427,6 +428,7 @@ void check_idling(struct char_data *ch)
 			ch->desc = 0;
 			extract_char(ch);
 		}
+	}
 }
 
 

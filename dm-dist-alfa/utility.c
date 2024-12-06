@@ -70,7 +70,7 @@ void sprintbit(long vektor, char *names[], char *result)
 
 	for(nr=0; vektor; vektor>>=1)
 	{
-		if (IS_SET(1, vektor))
+		if (IS_SET(1, vektor)) {
 			if (*names[nr] != '\n') {
 				strcat(result,names[nr]);
 				strcat(result," ");
@@ -78,6 +78,7 @@ void sprintbit(long vektor, char *names[], char *result)
 				strcat(result,"UNDEFINED");
 				strcat(result," ");
 			}
+		}
 		if (*names[nr] != '\n')
 		  nr++;
 	}
